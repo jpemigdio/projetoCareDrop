@@ -1,5 +1,9 @@
 # Care Drop — MediCuidar
 
+## Sprints, login e implantação
+
+Esta versão inclui autenticação de administrador/cuidador, confirmação de e-mail por código, perfis de residentes, prescrições recorrentes, agenda diária com filtros e registro de doses. Para atualizar um banco existente e configurar SMTP, siga [INSTRUCOES_ATUALIZACAO.md](INSTRUCOES_ATUALIZACAO.md).
+
 Aplicação acadêmica em Java 17, JSP, Servlets, JDBC e MySQL, organizada em MVC/DAO. A interface toma como referência a imagem enviada: navegação lateral verde, cartões de resumo e painéis claros.
 
 ## Pré-requisitos

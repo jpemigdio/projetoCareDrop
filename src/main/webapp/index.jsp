@@ -1,1 +1,1 @@
-<%@ page language="java" %><% response.sendRedirect(request.getContextPath()+"/app?view=dashboard"); %>
+<%@ page language="java" %><% response.sendRedirect(request.getContextPath()+"/auth"); %>
