@@ -59,6 +59,14 @@ CREATE TABLE IF NOT EXISTS cadastros_pendentes (
  criado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS recuperacoes_senha (
+ email VARCHAR(254) PRIMARY KEY,
+ codigo_hash CHAR(64) NOT NULL,
+ expira_em TIMESTAMP NOT NULL,
+ tentativas INT NOT NULL DEFAULT 0,
+ criado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Uma prescrição representa um horário diário. Para mais horários, cadastre
 -- uma prescrição para cada horário do medicamento.
 CREATE TABLE IF NOT EXISTS prescricoes_medicamentos (

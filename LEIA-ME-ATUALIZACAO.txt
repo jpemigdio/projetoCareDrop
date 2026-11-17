@@ -1,0 +1,14 @@
+CareDrop — acesso completo para cuidador
+
+Este pacote atualiza as telas e permissões para que um usuário autenticado como Cuidador veja e use as mesmas áreas do Administrador: Painel, Agenda, Residentes, Prescrições, Usuários, Medicamentos e Histórico de doses. Também permite ao cuidador cadastrar contas de cuidador e administrador pela tela Usuários.
+
+PASSO A PASSO
+1. Pare o Tomcat.
+2. Extraia este ZIP dentro de C:\Users\joaop\Documents\projetoCareDrop. Confirme que a pasta extraída é `src` e escolha substituir os arquivos existentes.
+3. Abra o terminal do VS Code na pasta projetoCareDrop e rode: mvn package
+4. Quando aparecer BUILD SUCCESS, abra a pasta webapps do seu Tomcat.
+5. Renomeie a pasta `care-drop` para `care-drop-backup` para guardar a versão anterior. Substitua `care-drop.war` pelo arquivo recém-gerado em `projetoCareDrop\target\care-drop.war`.
+6. Inicie o Tomcat. Aguarde a pasta `care-drop` ser extraída a partir do WAR.
+7. Abra http://localhost:8080/care-drop/auth e entre com o usuário Cuidador.
+
+Não precisa importar SQL novamente. O cuidador terá também permissão para administrar usuários e criar contas de Administrador, conforme solicitado. Mantenha o ZIP e a pasta de backup caso queira reverter.

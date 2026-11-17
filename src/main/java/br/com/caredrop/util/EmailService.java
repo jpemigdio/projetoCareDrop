@@ -14,6 +14,17 @@ public final class EmailService {
     private EmailService() {}
 
     public static void enviarCodigo(String destinatario, String codigo, String linkVerificacao) throws Exception {
+        enviar(destinatario,"Código de verificação CareDrop","Seu código de verificação do CareDrop é: " + codigo
+                + "\n\nAbra este endereço para confirmar o e-mail: " + linkVerificacao
+                + "\n\nO código expira em 10 minutos. Se você não solicitou este cadastro, ignore esta mensagem.");
+    }
+
+    public static void enviarCodigoRecuperacao(String destinatario, String codigo) throws Exception {
+        enviar(destinatario,"Recuperação de senha CareDrop","Seu código para redefinir a senha do CareDrop é: " + codigo
+                + "\n\nO código expira em 10 minutos e pode ser usado uma única vez. Se você não solicitou a recuperação, ignore esta mensagem.");
+    }
+
+    private static void enviar(String destinatario,String assunto,String texto) throws Exception {
         String host = env("SMTP_HOST");
         String port = envOr("SMTP_PORT", "587");
         String username = env("SMTP_USER");
@@ -41,11 +52,8 @@ public final class EmailService {
         MimeMessage message = new MimeMessage(session);
         message.setFrom(new InternetAddress(from));
         message.setRecipient(Message.RecipientType.TO, new InternetAddress(destinatario));
-        message.setSubject("Código de verificação CareDrop", StandardCharsets.UTF_8.name());
-        message.setText("Seu código de verificação do CareDrop é: " + codigo
-                + "\n\nAbra este endereço para confirmar o e-mail: " + linkVerificacao
-                + "\n\nO código expira em 10 minutos. Se você não solicitou este cadastro, ignore esta mensagem.",
-                StandardCharsets.UTF_8.name());
+        message.setSubject(assunto, StandardCharsets.UTF_8.name());
+        message.setText(texto, StandardCharsets.UTF_8.name());
         Transport.send(message);
     }
 

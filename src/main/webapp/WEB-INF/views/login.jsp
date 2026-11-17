@@ -8,6 +8,8 @@
 <% if (Boolean.TRUE.equals(request.getAttribute("verificar"))) { %><h1>Confirme seu e-mail</h1><p>Digite o código de 6 dígitos enviado para concluir o cadastro.</p>
 <% } else if (Boolean.TRUE.equals(request.getAttribute("primeiroAcesso"))) { %><h1>Configurar administrador</h1><p>Crie a primeira conta administrativa do Care Drop.</p>
 <% } else if (Boolean.TRUE.equals(request.getAttribute("cadastro"))) { %><h1>Criar cadastro</h1><p>Informe seus dados para criar uma conta e confirmar seu e-mail.</p>
+<% } else if (Boolean.TRUE.equals(request.getAttribute("recuperar"))) { %><h1>Recuperar senha</h1><p>Informe o e-mail da sua conta para receber um código de recuperação.</p>
+<% } else if (Boolean.TRUE.equals(request.getAttribute("redefinir"))) { %><h1>Redefinir senha</h1><p>Digite o código recebido e escolha uma nova senha.</p>
 <% } else { %><h1>Entrar no Care Drop</h1><p>Acesse sua área de trabalho com seu perfil.</p><% } %>
 </div>
 <c:if test="${not empty authErro}"><div class="notice error"><c:out value="${authErro}"/></div></c:if>
@@ -38,14 +40,32 @@
  <button class="primary">Criar cadastro e enviar código</button>
  <a class="back-link" href="${pageContext.request.contextPath}/auth">Já tenho cadastro — voltar ao acesso</a>
 </form>
+<% } else if (Boolean.TRUE.equals(request.getAttribute("recuperar"))) { %>
+<form method="post" action="${pageContext.request.contextPath}/auth" class="auth-form">
+ <input type="hidden" name="acao" value="solicitarRecuperacao">
+ <label>E-mail da conta<input name="email" type="email" value="${email}" maxlength="254" autocomplete="email" required></label>
+ <button class="primary">Enviar código de recuperação</button>
+ <a class="back-link" href="${pageContext.request.contextPath}/auth">Voltar ao acesso</a>
+</form>
+<% } else if (Boolean.TRUE.equals(request.getAttribute("redefinir"))) { %>
+<form method="post" action="${pageContext.request.contextPath}/auth" class="auth-form">
+ <input type="hidden" name="acao" value="redefinirSenha">
+ <label>E-mail<input name="email" type="email" value="${email}" readonly required></label>
+ <label>Código recebido por e-mail<input name="codigo" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="000000" required></label>
+ <label>Nova senha<input name="novaSenha" type="password" minlength="8" autocomplete="new-password" required><small>Use pelo menos 8 caracteres.</small></label>
+ <label>Confirmar nova senha<input name="confirmarSenha" type="password" minlength="8" autocomplete="new-password" required></label>
+ <button class="primary">Salvar nova senha</button>
+ <a class="back-link" href="${pageContext.request.contextPath}/auth?view=recuperar">Solicitar outro código</a>
+</form>
 <% } else { %>
 <div class="role-tabs" role="tablist"><button type="button" class="role-tab active" data-role="ADMIN">Administrador</button><button type="button" class="role-tab" data-role="CUIDADOR">Cuidador</button></div>
 <form method="post" action="${pageContext.request.contextPath}/auth" class="auth-form">
  <input type="hidden" name="acao" value="login"><input type="hidden" id="perfil" name="perfil" value="ADMIN">
  <label>E-mail<input name="email" type="email" value="${email}" autocomplete="username" maxlength="254" required></label>
  <label>Senha<input name="senha" type="password" autocomplete="current-password" required></label>
- <button class="primary">Entrar como administrador</button>
- <a class="signup-link" href="${pageContext.request.contextPath}/auth?view=cadastro">Não tem cadastro? <b>Criar cadastro</b></a>
+<a class="primary auth-link-button" style="display:flex;align-items:center;justify-content:center;width:100%;min-height:46px;padding:0 14px;box-sizing:border-box;color:#fff;text-align:center;text-decoration:none" href="${pageContext.request.contextPath}/auth?view=recuperar">Esqueceu a senha?</a>
+ <button type="submit" class="primary login-submit">Entrar como administrador</button>
+<a class="primary auth-link-button" style="display:flex;align-items:center;justify-content:center;width:100%;min-height:46px;padding:0 14px;box-sizing:border-box;color:#fff;text-align:center;text-decoration:none" href="${pageContext.request.contextPath}/auth?view=cadastro">Não tem cadastro? Criar cadastro</a>
 </form><% } %>
 <p class="auth-foot">Sistema de gestão de medicamentos</p>
 </section><div class="auth-side"><div class="side-content"><span class="side-symbol">✚</span><h2>Mais cuidado em cada rotina.</h2><p>Informações de residentes, medicamentos e administrações em um só lugar.</p></div><small>Care Drop · Sistema Integrado de Gestão</small></div></main>
@@ -53,6 +73,6 @@
 document.querySelectorAll('.role-tab').forEach(tab=>tab.addEventListener('click',()=>{
  document.querySelectorAll('.role-tab').forEach(t=>t.classList.remove('active'));tab.classList.add('active');
  const role=tab.dataset.role;document.getElementById('perfil').value=role;
- document.querySelector('.primary').textContent='Entrar como '+(role==='ADMIN'?'administrador':'cuidador');
+ document.querySelector('.login-submit').textContent='Entrar como '+(role==='ADMIN'?'administrador':'cuidador');
 }));
 </script></body></html>

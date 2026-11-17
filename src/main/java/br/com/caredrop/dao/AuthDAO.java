@@ -73,6 +73,40 @@ public class AuthDAO {
         }
     }
 
+    public void iniciarRecuperacao(String email, String codigoHash, Timestamp expira) throws SQLException {
+        String sql="INSERT INTO recuperacoes_senha(email,codigo_hash,expira_em,tentativas) "
+                + "SELECT ?,?,?,0 FROM usuarios WHERE email=? AND ativo=TRUE "
+                + "ON DUPLICATE KEY UPDATE codigo_hash=VALUES(codigo_hash),expira_em=VALUES(expira_em),tentativas=0";
+        try(Connection c=ConnectionFactory.getConnection();PreparedStatement p=c.prepareStatement(sql)){
+            p.setString(1,email);p.setString(2,codigoHash);p.setTimestamp(3,expira);p.setString(4,email);p.executeUpdate();
+        }
+    }
+
+    public boolean redefinirSenha(String email, String hashEsperado, String novoHash) throws SQLException {
+        try(Connection c=ConnectionFactory.getConnection()){
+            c.setAutoCommit(false);
+            try(PreparedStatement p=c.prepareStatement("SELECT codigo_hash,expira_em,tentativas FROM recuperacoes_senha WHERE email=? FOR UPDATE")){
+                p.setString(1,email);
+                try(ResultSet r=p.executeQuery()){
+                    if(!r.next()){c.rollback();return false;}
+                    String armazenado=r.getString("codigo_hash");Timestamp expira=r.getTimestamp("expira_em");int tentativas=r.getInt("tentativas");
+                    boolean valido=tentativas<5 && expira!=null && expira.after(new Timestamp(System.currentTimeMillis()))
+                            && java.security.MessageDigest.isEqual(armazenado.getBytes(java.nio.charset.StandardCharsets.UTF_8),hashEsperado.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    if(!valido){
+                        try(PreparedStatement u=c.prepareStatement("UPDATE recuperacoes_senha SET tentativas=tentativas+1 WHERE email=?")){u.setString(1,email);u.executeUpdate();}
+                        c.commit();return false;
+                    }
+                    try(PreparedStatement u=c.prepareStatement("UPDATE usuarios SET senha_hash=? WHERE email=? AND ativo=TRUE")){
+                        u.setString(1,novoHash);u.setString(2,email);
+                        if(u.executeUpdate()!=1){c.rollback();return false;}
+                    }
+                    try(PreparedStatement d=c.prepareStatement("DELETE FROM recuperacoes_senha WHERE email=?")){d.setString(1,email);d.executeUpdate();}
+                    c.commit();return true;
+                }
+            }catch(SQLException|RuntimeException ex){c.rollback();throw ex;}
+        }
+    }
+
     public boolean senhaConfere(User user, char[] senha) { return PasswordUtil.verify(senha,user.senhaHash()); }
 
     private User user(ResultSet r) throws SQLException {

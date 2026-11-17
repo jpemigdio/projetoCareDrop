@@ -27,6 +27,7 @@ public class SistemaServlet extends HttpServlet {
         if(!podeGerenciar(req)&&!Set.of("agenda","idosos","perfil").contains(view))view="agenda";
         Object ok=req.getSession().getAttribute("sucesso"),falha=req.getSession().getAttribute("erro"),authErr=req.getSession().getAttribute("authErro"),authOk=req.getSession().getAttribute("authOk");
         req.setAttribute("nomeUsuario",req.getSession().getAttribute("nome"));req.setAttribute("perfilUsuario",req.getSession().getAttribute("perfil"));
+        if("usuarios".equals(view)&&!"ADMIN".equals(req.getSession().getAttribute("perfil"))){req.setAttribute("erro","Apenas administradores podem cadastrar e consultar usuários.");view="agenda";}
         if(ok!=null){req.setAttribute("sucesso",ok);req.getSession().removeAttribute("sucesso");}
         if(falha!=null){req.setAttribute("erro",falha);req.getSession().removeAttribute("erro");}
         if(authErr!=null){req.setAttribute("erro",authErr);req.getSession().removeAttribute("authErro");}
@@ -65,7 +66,7 @@ public class SistemaServlet extends HttpServlet {
             }
             req.getSession().setAttribute("sucesso",acao.equals("marcarDose")?"Dose registrada como administrada.":"Registro salvo com sucesso.");
         }catch(Exception e){req.getSession().setAttribute("erro",mensagem(e));}
-        String query="/app?view="+voltar;if(voltar.equals("agenda")&&!campo(req,"data").isBlank())query+="&data="+campo(req,"data");
+        String query="/app?view="+voltar;if(voltar.equals("agenda")){for(String filtro:new String[]{"data","idosoId","turno","status"})if(!campo(req,filtro).isBlank())query+="&"+filtro+"="+java.net.URLEncoder.encode(campo(req,filtro),java.nio.charset.StandardCharsets.UTF_8);}
         resp.sendRedirect(req.getContextPath()+query);
     }
     private void obrigatorio(HttpServletRequest req,String... campos){for(String c:campos)if(campo(req,c).isBlank())throw new IllegalArgumentException("Preencha todos os campos obrigatórios.");}

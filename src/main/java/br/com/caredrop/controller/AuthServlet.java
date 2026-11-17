@@ -29,6 +29,8 @@ public class AuthServlet extends HttpServlet {
         HttpSession session = req.getSession(false);
         boolean verificar="verificar".equals(req.getParameter("view"));
         boolean cadastro="cadastro".equals(req.getParameter("view"));
+        boolean recuperar="recuperar".equals(req.getParameter("view"));
+        boolean redefinir="redefinir".equals(req.getParameter("view"));
         if (!verificar && session != null && session.getAttribute("userId") != null) {
             redirectHome(req, resp, (String)session.getAttribute("perfil")); return;
         }
@@ -40,6 +42,8 @@ public class AuthServlet extends HttpServlet {
         catch (SQLException ex) { throw new ServletException("Não foi possível consultar os usuários. Importe a migração de login do CareDrop.",ex); }
         req.setAttribute("verificar", verificar);
         req.setAttribute("cadastro", cadastro);
+        req.setAttribute("recuperar", recuperar);
+        req.setAttribute("redefinir", redefinir);
         req.setAttribute("email", req.getParameter("email") == null ? "" : req.getParameter("email"));
         req.getRequestDispatcher("/WEB-INF/views/login.jsp").forward(req,resp);
     }
@@ -60,17 +64,19 @@ public class AuthServlet extends HttpServlet {
                     iniciar(req,resp,email,perfil,primeiroAdmin,true);
                 }                case "criarUsuario" -> {
                     HttpSession s=req.getSession(false);
-                    if(s==null || s.getAttribute("userId")==null) throw new SecurityException("É necessário estar conectado para cadastrar usuários.");
+                    if(s==null || !"ADMIN".equals(s.getAttribute("perfil"))) throw new SecurityException("Somente administradores podem cadastrar usuários.");
                     String perfil=val(req,"perfil");
                     if(!"ADMIN".equals(perfil) && !"CUIDADOR".equals(perfil)) throw new IllegalArgumentException("Selecione cuidador ou administrador.");
                     iniciar(req,resp,email,perfil,false,false);
                 }
                 case "criarCuidador" -> {
                     HttpSession s=req.getSession(false);
-                    if(s==null || s.getAttribute("userId")==null) throw new SecurityException("É necessário estar conectado para cadastrar cuidadores.");
+                    if(s==null || !"ADMIN".equals(s.getAttribute("perfil"))) throw new SecurityException("Somente administradores podem cadastrar cuidadores.");
                     iniciar(req,resp,email,"CUIDADOR",false,false);
                 }
                 case "verificar" -> verificar(req,resp,email);
+                case "solicitarRecuperacao" -> solicitarRecuperacao(req,resp,email);
+                case "redefinirSenha" -> redefinirSenha(req,resp,email);
                 case "sair" -> { HttpSession s=req.getSession(false); if(s!=null)s.invalidate(); resp.sendRedirect(req.getContextPath()+"/auth"); }
                 default -> throw new IllegalArgumentException("Ação inválida.");
             }
@@ -120,17 +126,45 @@ public class AuthServlet extends HttpServlet {
         resp.sendRedirect(req.getContextPath()+"/auth");
     }
 
+    private void solicitarRecuperacao(HttpServletRequest req,HttpServletResponse resp,String email)throws Exception{
+        validarEmail(email);
+        User user=dao.buscarPorEmail(email).orElse(null);
+        if(user!=null && user.ativo()){
+            String codigo=String.format(Locale.ROOT,"%06d",RANDOM.nextInt(1_000_000));
+            Timestamp expira=Timestamp.from(Instant.now().plus(10,ChronoUnit.MINUTES));
+            dao.iniciarRecuperacao(email,PasswordUtil.hashCode(email,codigo),expira);
+            EmailService.enviarCodigoRecuperacao(email,codigo);
+        }
+        req.getSession().setAttribute("authOk","Se o e-mail estiver cadastrado, enviaremos um código de recuperação válido por 10 minutos.");
+        resp.sendRedirect(req.getContextPath()+"/auth?view=redefinir&email="+URLEncoder.encode(email,StandardCharsets.UTF_8));
+    }
+
+    private void redefinirSenha(HttpServletRequest req,HttpServletResponse resp,String email)throws Exception{
+        validarEmail(email);
+        String codigo=val(req,"codigo"), senha=raw(req,"novaSenha"), confirmar=raw(req,"confirmarSenha");
+        if(!codigo.matches("[0-9]{6}"))throw new IllegalArgumentException("Digite o código de 6 dígitos recebido por e-mail.");
+        if(senha==null || senha.length()<8)throw new IllegalArgumentException("A nova senha deve ter pelo menos 8 caracteres.");
+        if(!senha.equals(confirmar))throw new IllegalArgumentException("As senhas não coincidem.");
+        boolean alterada=dao.redefinirSenha(email,PasswordUtil.hashCode(email,codigo),PasswordUtil.hash(senha.toCharArray()));
+        if(!alterada)throw new IllegalArgumentException("Código incorreto, expirado ou e-mail não cadastrado. Solicite um novo código.");
+        req.getSession().setAttribute("authOk","Senha alterada. Entre com sua nova senha.");
+        resp.sendRedirect(req.getContextPath()+"/auth");
+    }
+
     private void falhar(HttpServletRequest req,HttpServletResponse resp,String mensagem,String email)throws IOException{
         req.getSession().setAttribute("authErro",mensagem==null?"Não foi possível concluir o pedido.":mensagem);
         String path="/auth";
         if("verificar".equals(val(req,"acao")))path+="?view=verificar&email="+URLEncoder.encode(email,StandardCharsets.UTF_8);
         else if("cadastro".equals(val(req,"acao")))path+="?view=cadastro";
+        else if("solicitarRecuperacao".equals(val(req,"acao")))path+="?view=recuperar";
+        else if("redefinirSenha".equals(val(req,"acao")))path+="?view=redefinir&email="+URLEncoder.encode(email,StandardCharsets.UTF_8);
         else if("criarCuidador".equals(val(req,"acao")) || "criarUsuario".equals(val(req,"acao")))path="/app?view=usuarios";
         resp.sendRedirect(req.getContextPath()+path);
     }
 
     private String mensagem(Exception ex){
         if(ex instanceof SQLException && ex.getMessage()!=null && ex.getMessage().contains("cadastros_pendentes")) return "As tabelas de login ainda não foram criadas. Importe o arquivo sprint1_sprint2_login_migration.sql pelo phpMyAdmin.";
+        if(ex instanceof SQLException && ex.getMessage()!=null && ex.getMessage().contains("recuperacoes_senha")) return "A tabela de recuperação ainda não foi criada. Importe o arquivo sprint3_recuperacao_senha.sql pelo phpMyAdmin.";
         String m=ex.getMessage(); return m==null?"Não foi possível concluir. Confira o log do Tomcat.":m;
     }
     private void validarEmail(String email){if(email.length()>254 || !EMAIL.matcher(email).matches())throw new IllegalArgumentException("Digite um e-mail válido.");}
